@@ -8,6 +8,8 @@ require('date-utils'); // don't love this approach, but whatever.
 
 var legend = {
   ' ': 0,
+  '.': 1,
+  '"': 2,
   '$': 10,
   '#': 25,
   '@': 40,
@@ -20,6 +22,9 @@ function pad(n) {
 var width = 50;
 
 process.stdin.pipe(concat(function(data) {
+  if(/[^\s\n."$#@]/.test(data)) {
+    throw new Error('Input must contain only the following characters: ', Object.keys(legend).toString());
+  }
   var grid = data.toString('ascii')
   .split('\n')
   .map(function(s) {
@@ -75,15 +80,20 @@ function commit(date, n, cb) {
   // add and commit.
   var datestring = date.toUTCString();
   var command = [
-    'GIT_AUTHOR_DATE="', datestring, '",GIT_COMMITTER_DATE="', datestring, '" ',
-    'echo "Tardis commit ', n, ' on ', date.toUTCString(), '"'
-  ];
-  if(!(/test/.test(process.argv[2]))) {
-    command.push(' && git commit -am "[tardis] ',date.toString(),'"');
+    'GIT_AUTHOR_DATE="'+datestring+'"',
+    'GIT_COMMITTER_DATE="'+datestring+'"',
+    'git commit -am "[tardis] ',date.toString(),'"'
+  ].join(' ');
+  
+  if(!(/test/.test(process.argv[2])))
+    exec(command, next);
+  else {
+    //dry run
+    console.log(command);
+    next();
   }
   
-  exec(command.join(''),
-  function(err, stdout, stderr) {
+  function next(err, stdout, stderr) {
     if(err) {
       console.log("there was an error", err);
       throw err;
@@ -91,5 +101,5 @@ function commit(date, n, cb) {
     if(stdout) console.log(stdout);
     if(stderr) console.error(stderr);
     cb(err, stdout, stderr);
-  });
+  }
 }
