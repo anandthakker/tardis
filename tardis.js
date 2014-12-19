@@ -83,7 +83,8 @@ function commit(date, n, cb) {
   var command = [
     'GIT_AUTHOR_DATE="'+datestring+'"',
     'GIT_COMMITTER_DATE="'+datestring+'"',
-    'git commit -am "[tardis] ',date.toString(),'"'
+    'git commit -am "[tardis] ',date.toString(),'"',
+    (/v/.test(process.argv[2]) ? '' : ' > /dev/null')
   ].join(' ');
   
   if(!(/test/.test(process.argv[2])))
