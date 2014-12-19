@@ -17,23 +17,25 @@ function pad(n) {
   return (n > 0) ? new Array(n+1).join(' ') : '';
 }    
 
+var width = 50;
+
 process.stdin.pipe(concat(function(data) {
   var grid = data.toString('ascii')
   .split('\n')
   .map(function(s) {
-    return (s + pad(50 - s.length)).slice(0,50)
+    return (s + pad(width - s.length)).slice(0,width)
     .split('')
     .map(function(c) { return legend[c] || 0; });
   });
   
   var dates = [];
-  for(var i = 0; i < grid.length; i++) { // rows
-    for(var j = 0; j < grid[i].length; j++) { // columns
+  for(var j = 0; j < width; j++) { // columns
+    for(var i = 0; i < grid.length; i++) { // rows
       if(grid[i][j]) dates.push([plot(i,j), grid[i][j]]);
     }
   }
   
-  var start = dates.reduce(function(prev, current) {
+  var start = dates.reverse().reduce(function(prev, current) {
     return function() {
       commit(current[0], current[1], prev);
     }
@@ -71,12 +73,16 @@ function commit(date, n, cb) {
   fs.writeFileSync('date.txt', date.toString() + ' #' + n);
   
   // add and commit.
-  var command = 'echo "Tardis commit ' + n + ' on ' + date.toUTCString() + '"';
+  var datestring = date.toUTCString();
+  var command = [
+    'GIT_AUTHOR_DATE="', datestring, '",GIT_COMMITTER_DATE="', datestring, '" ',
+    'echo "Tardis commit ', n, ' on ', date.toUTCString(), '"'
+  ];
   if(!(/test/.test(process.argv[2]))) {
-    command += ' && git commit -am "'+date.toString()+'" --date="'+date.toUTCString()+'"';
+    command.push(' && git commit -am "[tardis] ',date.toString(),'"');
   }
   
-  exec(command,
+  exec(command.join(''),
   function(err, stdout, stderr) {
     if(err) {
       console.log("there was an error", err);
